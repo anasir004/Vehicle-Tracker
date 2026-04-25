@@ -3,7 +3,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let lastLocation = { lat: 9.0820, lng: 8.6753, time: 'Waiting for GPS...' };
+let lastLocation = { lat: 11.0753, lng: 7.7227, time: 'Waiting for GPS...' };
 
 // ESP8266 sends data here
 app.post('/update', (req, res) => {
@@ -61,7 +61,7 @@ app.get('/', (req, res) => {
   <div id="map"></div>
 
   <script>
-    let map, marker, infoWindow;
+    let map, marker;
     let isFirstLoad = true;
 
     function initMap() {
@@ -79,7 +79,6 @@ app.get('/', (req, res) => {
         }
       });
 
-      infoWindow = new google.maps.InfoWindow();
       fetchLocation();
       setInterval(fetchLocation, 5000);
     }
@@ -101,6 +100,9 @@ app.get('/', (req, res) => {
             '📍 ' + data.lat + ', ' + data.lng;
           document.getElementById('timestamp').innerHTML =
             '🕐 ' + data.time;
+          document.getElementById('status').style.background = '#e8f5e9';
+          document.getElementById('status').style.color = '#2e7d32';
+          document.getElementById('status').innerHTML = '● LIVE';
         })
         .catch(() => {
           document.getElementById('status').style.background = '#ffebee';
@@ -109,8 +111,9 @@ app.get('/', (req, res) => {
         });
     }
   </script>
+
   <script async
-    src="https://maps.googleapis.com/maps/api/js?key=MAPS_API_KEY&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJqEAaEU5sFp4X-7HAXXfCx2EPVTK5yRw&callback=initMap">
   </script>
 </body>
 </html>`);
