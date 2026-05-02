@@ -1,13 +1,25 @@
 const express = require('express');
+const http = require('http');
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let lastLocation = { lat: 11.0753, lng: 7.7227, time: 'Waiting for GPS...' };
+let lastLocation = {
+  lat: 11.0753,
+  lng: 7.7227,
+  time: 'Waiting for GPS...'
+};
 
-// ESP8266 sends data here
-app.post('/update', (req, res) => {
-  const { lat, lng } = req.body;
+// Keep Railway alive every 25 minutes
+setInterval(() => {
+  http.get('http://vehicle-tracker-production-d3bc.up.railway.app/location',
+    (res) => console.log('[KEEPALIVE] Pinged:', res.statusCode)
+  ).on('error', (e) => console.log('[KEEPALIVE] Error:', e.message));
+}, 25 * 60 * 1000);
+
+// ESP8266 sends GET request here
+app.get('/update', (req, res) => {
+  const { lat, lng } = req.query;
   if (lat && lng) {
     lastLocation = {
       lat: parseFloat(lat).toFixed(6),
@@ -19,10 +31,24 @@ app.post('/update', (req, res) => {
   res.send('OK');
 });
 
-// Browser polls this every 5 seconds
+// Keep POST as backup
+app.post('/update', (req, res) => {
+  const { lat, lng } = req.body;
+  if (lat && lng) {
+    lastLocation = {
+      lat: parseFloat(lat).toFixed(6),
+      lng: parseFloat(lng).toFixed(6),
+      time: new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })
+    };
+    console.log(`[UPDATE POST] Lat: ${lat}, Lng: ${lng}`);
+  }
+  res.send('OK');
+});
+
+// Browser polls this
 app.get('/location', (req, res) => res.json(lastLocation));
 
-// Main dashboard page
+// Main dashboard
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html>
@@ -59,7 +85,6 @@ app.get('/', (req, res) => {
     <span id="status">● LIVE</span>
   </div>
   <div id="map"></div>
-
   <script>
     let map, marker;
     let isFirstLoad = true;
@@ -70,7 +95,6 @@ app.get('/', (req, res) => {
         center: { lat: 11.0753, lng: 7.7227 },
         mapTypeId: 'roadmap'
       });
-
       marker = new google.maps.Marker({
         map: map,
         title: 'Vehicle',
@@ -78,7 +102,6 @@ app.get('/', (req, res) => {
           url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
         }
       });
-
       fetchLocation();
       setInterval(fetchLocation, 5000);
     }
@@ -111,7 +134,6 @@ app.get('/', (req, res) => {
         });
     }
   </script>
-
   <script async
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJqEAaEU5sFp4X-7HAXXfCx2EPVTK5yRw&callback=initMap">
   </script>
