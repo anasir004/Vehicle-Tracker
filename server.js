@@ -48,7 +48,7 @@ app.post('/update', (req, res) => {
 // Browser polls this
 app.get('/location', (req, res) => res.json(lastLocation));
 
-// Main dashboard
+// Main dashboard — OpenStreetMap via Leaflet (no API key needed)
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html>
@@ -56,6 +56,8 @@ app.get('/', (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🚗 Vehicle Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; }
@@ -86,37 +88,25 @@ app.get('/', (req, res) => {
   </div>
   <div id="map"></div>
   <script>
-    let map, marker;
-    let isFirstLoad = true;
+    var map = L.map('map').setView([11.0753, 7.7227], 16);
 
-    function initMap() {
-      map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 16,
-        center: { lat: 11.0753, lng: 7.7227 },
-        mapTypeId: 'roadmap'
-      });
-      marker = new google.maps.Marker({
-        map: map,
-        title: 'Vehicle',
-        icon: {
-          url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-        }
-      });
-      fetchLocation();
-      setInterval(fetchLocation, 5000);
-    }
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    var marker = L.marker([11.0753, 7.7227]).addTo(map);
+    var isFirstLoad = true;
 
     function fetchLocation() {
       fetch('/location')
         .then(r => r.json())
         .then(data => {
-          const pos = {
-            lat: parseFloat(data.lat),
-            lng: parseFloat(data.lng)
-          };
-          marker.setPosition(pos);
+          var lat = parseFloat(data.lat);
+          var lng = parseFloat(data.lng);
+          marker.setLatLng([lat, lng]);
           if (isFirstLoad) {
-            map.setCenter(pos);
+            map.setView([lat, lng], 16);
             isFirstLoad = false;
           }
           document.getElementById('coords').innerHTML =
@@ -133,9 +123,9 @@ app.get('/', (req, res) => {
           document.getElementById('status').innerHTML = '● OFFLINE';
         });
     }
-  </script>
-  <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJqEAaEU5sFp4X-7HAXXfCx2EPVTK5yRw&callback=initMap">
+
+    fetchLocation();
+    setInterval(fetchLocation, 5000);
   </script>
 </body>
 </html>`);
